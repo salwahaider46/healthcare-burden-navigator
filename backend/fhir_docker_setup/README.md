@@ -64,8 +64,9 @@ from fhir.observation
 order by effective_time desc
 limit 20;
 
-select claim_id, total_value, provider_display
+select claim_id, total_value, pr.display_name as provider
 from fhir.claim
+join fhir.provider pr on pr.provider_pk = claim.provider_pk
 order by created_time desc
 limit 20;
 ```
@@ -86,3 +87,29 @@ docker compose up -d
 - The SQL init scripts run automatically **only on first database initialization**. If you change the schema later, either apply it manually or reset with `docker compose down -v`.
 - The loader preserves the original FHIR resources in `fhir.resource_raw.resource_json` and also populates query-friendly relational tables.
 - This dataset may contain sensitive identifiers; do not expose this stack publicly without hardening credentials and access.
+
+## Getting the normalized schema 
+
+The `init/` folder contains three scripts that run automatically in order when Postgres starts fresh. The easiest way to get a fully normalized DB is to reset and reload:
+
+```bash
+docker compose down -v
+docker compose up -d postgres pgadmin
+```
+
+Then reload all patient files:
+
+```bash
+for f in data/*.json; do
+  python3 loader/load_fhir_bundle.py "postgresql://fhir_user:fhir_password@localhost:5432/fhir_demo" "$f"
+done
+```
+
+This gives you the complete normalized schema including `fhir.code`, `fhir.provider`, and `fhir.location` lookup tables with FK columns wired up across all domain tables.
+
+If you already have a running DB and don't want to reset, apply the migrations manually instead:
+
+```bash
+docker exec -i fhir_postgres psql -U fhir_user -d fhir_demo < init/02_normalization_phase1.sql
+docker exec -i fhir_postgres psql -U fhir_user -d fhir_demo < init/03_normalization_phase2.sql
+```
