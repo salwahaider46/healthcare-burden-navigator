@@ -4,8 +4,99 @@ from typing import Optional, List
 
 from app.database import get_db
 from app import models, schemas, fhir_client
+from app.services.filtering import apply_filters, compute_distance_miles
+from app.services.ranking import rank_providers
 
 router = APIRouter(prefix="/providers", tags=["providers"])
+
+
+@router.get("/recommendations", response_model=List[schemas.RankedProviderOut])
+def get_recommendations(
+    specialty: Optional[str] = Query(None, description="Medical specialty"),
+    insurance: Optional[str] = Query(None, description="Insurance plan accepted"),
+    telehealth: Optional[bool] = Query(None, description="Telehealth availability"),
+    zip_code: Optional[str] = Query(None, description="Patient zip code for distance filtering"),
+    max_distance_miles: Optional[float] = Query(None, description="Maximum distance in miles"),
+    user_lat: Optional[float] = Query(None, description="Patient latitude"),
+    user_lon: Optional[float] = Query(None, description="Patient longitude"),
+    patient_id: Optional[str] = Query(None, description="FHIR patient ID for care-need inference"),
+    limit: int = Query(10, le=50),
+    db: Session = Depends(get_db),
+):
+    """
+    Return ranked provider recommendations based on filters and patient context.
+
+    Filtering (Ahmet) and ranking (Vivek) logic live in app/services/.
+    FHIR patient data (Sitong) is fetched here when patient_id is provided.
+    """
+    query = db.query(models.Provider)
+    query = apply_filters(
+        query,
+        specialty=specialty,
+        insurance=insurance,
+        telehealth=telehealth,
+        zip_code=zip_code,
+        max_distance_miles=max_distance_miles,
+        user_lat=user_lat,
+        user_lon=user_lon,
+    )
+    providers = query.all()
+
+    # Fetch FHIR patient data for ranking context (Sitong's integration)
+    patient_conditions = None
+    patient_coverage = None
+    if patient_id:
+        try:
+            conditions_bundle = fhir_client.search_conditions(subject=patient_id)
+            patient_conditions = conditions_bundle.get("entry", [])
+        except Exception:
+            pass
+        try:
+            coverage_bundle = fhir_client.search_coverage(beneficiary=patient_id)
+            patient_coverage = coverage_bundle.get("entry", [])
+        except Exception:
+            pass
+
+    # Pre-compute distances when coordinates are available
+    distance_map: dict[int, float] = {}
+    if user_lat is not None and user_lon is not None:
+        for p in providers:
+            if p.latitude is not None and p.longitude is not None:
+                distance_map[p.id] = compute_distance_miles(
+                    user_lat, user_lon, p.latitude, p.longitude
+                )
+
+    ranked = rank_providers(
+        providers,
+        patient_conditions=patient_conditions,
+        patient_coverage=patient_coverage,
+        user_lat=user_lat,
+        user_lon=user_lon,
+        insurance=insurance,
+        specialty=specialty,
+        distance_map=distance_map,
+    )
+
+    results = []
+    for provider, score in ranked[:limit]:
+        out = schemas.RankedProviderOut(
+            id=provider.id,
+            name=provider.name,
+            specialty=provider.specialty,
+            city=provider.city,
+            state=provider.state,
+            zip_code=provider.zip_code,
+            phone=provider.phone,
+            insurance_accepted=provider.insurance_accepted,
+            telehealth=provider.telehealth,
+            latitude=provider.latitude,
+            longitude=provider.longitude,
+            fhir_id=provider.fhir_id,
+            rank_score=score,
+            distance_miles=distance_map.get(provider.id),
+        )
+        results.append(out)
+    return results
 
 
 @router.get("/search", response_model=List[schemas.ProviderOut])

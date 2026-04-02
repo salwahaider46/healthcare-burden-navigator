@@ -42,3 +42,10 @@ def search_encounters(subject: Optional[str] = None, practitioner: Optional[str]
     if practitioner:
         params["participant"] = practitioner
     return _get("Encounter", params=params)
+
+
+def search_coverage(beneficiary: Optional[str] = None) -> dict:
+    params = {}
+    if beneficiary:
+        params["beneficiary"] = beneficiary
+    return _get("Coverage", params=params)
