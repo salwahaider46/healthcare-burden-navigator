@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float
+from sqlalchemy import Boolean, Column, Float, Integer, String
 from app.database import Base
 
 
@@ -12,5 +12,8 @@ class Provider(Base):
     state = Column(String, index=True)
     zip_code = Column(String)
     phone = Column(String)
-    insurance_accepted = Column(String)  # comma-separated list
-    fhir_id = Column(String)             # links to FHIR Practitioner resource
+    insurance_accepted = Column(String)   # comma-separated list
+    telehealth = Column(Boolean, default=False)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    fhir_id = Column(String)              # links to FHIR Practitioner resource
