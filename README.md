@@ -33,6 +33,45 @@ API docs available at: http://localhost:8000/docs
 | GET | `/api/v1/fhir/practitioners/{fhir_id}` | Get a single FHIR Practitioner |
 | GET | `/api/v1/fhir/conditions` | Search FHIR Condition resources by patient |
 | GET | `/api/v1/fhir/encounters` | Search FHIR Encounter resources by patient |
+| GET | `/api/v1/fhir/coverage` | Search FHIR Coverage resources by patient |
+
+## Sprint 4 Demo Checklist
+
+Use this checklist for the status check-in demo (under 5 minutes).
+
+1) Confirm API is up:
+
+```bash
+curl -s http://localhost:8000/
+```
+
+Expected keys: `status`, `message`
+
+2) Verify raw FHIR Condition search:
+
+```bash
+curl -s "http://localhost:8000/api/v1/fhir/conditions?subject=<PATIENT_ID>"
+```
+
+Expected bundle fields: `resourceType`, optional `entry`
+
+3) Verify raw FHIR Coverage search:
+
+```bash
+curl -s "http://localhost:8000/api/v1/fhir/coverage?beneficiary=<PATIENT_ID>"
+```
+
+Expected bundle fields: `resourceType`, optional `entry`
+
+4) Verify recommendations endpoint uses patient context:
+
+```bash
+curl -s "http://localhost:8000/api/v1/providers/recommendations?patient_id=<PATIENT_ID>&limit=5"
+```
+
+Expected provider fields (per result): `id`, `name`, `specialty`, `insurance_accepted`, `telehealth`, `rank_score`, `distance_miles`
+
+Implementation note for Sprint 4: patient `Condition` and `Coverage` are normalized in `fhir_client.py` before ranking is called.
 
 ## Database Changes (Sprint 4)
 

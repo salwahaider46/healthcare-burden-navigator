@@ -44,3 +44,13 @@ def search_encounters(
         return fhir_client.search_encounters(subject=subject, practitioner=practitioner)
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"FHIR server error: {str(e)}")
+
+
+@router.get("/coverage")
+def search_coverage(
+    beneficiary: Optional[str] = Query(None, description="Patient ID"),
+):
+    try:
+        return fhir_client.search_coverage(beneficiary=beneficiary)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"FHIR server error: {str(e)}")

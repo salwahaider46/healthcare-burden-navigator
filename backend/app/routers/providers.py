@@ -47,15 +47,13 @@ def get_recommendations(
     patient_coverage = None
     if patient_id:
         try:
-            conditions_bundle = fhir_client.search_conditions(subject=patient_id)
-            patient_conditions = conditions_bundle.get("entry", [])
+            patient_conditions = fhir_client.get_patient_conditions(patient_id=patient_id)
         except Exception:
-            pass
+            patient_conditions = None
         try:
-            coverage_bundle = fhir_client.search_coverage(beneficiary=patient_id)
-            patient_coverage = coverage_bundle.get("entry", [])
+            patient_coverage = fhir_client.get_patient_coverage(patient_id=patient_id)
         except Exception:
-            pass
+            patient_coverage = None
 
     # Pre-compute distances when coordinates are available
     distance_map: dict[int, float] = {}
