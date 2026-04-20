@@ -30,6 +30,12 @@ body {
   flex-shrink: 0;
 }
 
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .header h1 {
   font-size: 1.4rem;
   font-weight: 700;
@@ -39,6 +45,34 @@ body {
   font-size: 0.875rem;
   opacity: 0.85;
   margin-top: 2px;
+}
+
+.header-nav {
+  display: flex;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.header-nav a {
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 6px 16px;
+  border-radius: 6px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.header-nav a:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+.header-nav a.active {
+  background: white;
+  color: #2b6cb0;
 }
 
 .layout {
