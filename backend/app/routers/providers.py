@@ -4,7 +4,7 @@ from typing import Optional, List
 
 from app.database import get_db
 from app import models, schemas, fhir_client
-from app.services.filtering import apply_filters, compute_distance_miles
+from app.services.filtering import apply_filters, build_distance_map_and_apply_radius
 from app.services.ranking import rank_providers
 
 router = APIRouter(prefix="/providers", tags=["providers"])
@@ -55,14 +55,12 @@ def get_recommendations(
         except Exception:
             patient_coverage = None
 
-    # Pre-compute distances when coordinates are available
-    distance_map: dict[int, float] = {}
-    if user_lat is not None and user_lon is not None:
-        for p in providers:
-            if p.latitude is not None and p.longitude is not None:
-                distance_map[p.id] = compute_distance_miles(
-                    user_lat, user_lon, p.latitude, p.longitude
-                )
+    providers, distance_map = build_distance_map_and_apply_radius(
+        providers,
+        user_lat=user_lat,
+        user_lon=user_lon,
+        max_distance_miles=max_distance_miles,
+    )
 
     ranked = rank_providers(
         providers,
