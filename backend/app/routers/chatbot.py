@@ -2,7 +2,7 @@ import json
 import os
 from typing import Optional
 
-import google.generativeai as genai
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -14,23 +14,38 @@ from app.services.ranking import rank_providers
 
 router = APIRouter(prefix="/chat", tags=["chatbot"])
 
-genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-_model = genai.GenerativeModel("gemini-1.5-flash")
+GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
+GEMINI_URL = (
+    "https://generativelanguage.googleapis.com/v1beta/models/"
+    "gemini-flash-latest:generateContent"
+)
 
-EXTRACT_PROMPT = """
+
+def _call_gemini(prompt: str) -> str:
+    payload = {"contents": [{"parts": [{"text": prompt}]}]}
+    response = httpx.post(
+        GEMINI_URL,
+        headers={"X-goog-api-key": GEMINI_API_KEY, "Content-Type": "application/json"},
+        json=payload,
+        timeout=20,
+    )
+    response.raise_for_status()
+    return response.json()["candidates"][0]["content"]["parts"][0]["text"]
+
+EXTRACT_PROMPT = """\
 You are a healthcare search assistant. Extract structured search filters from
 the user's natural language message and return ONLY a JSON object with these
 optional fields (omit fields not mentioned):
 
-{
-  "specialty":          string,   // e.g. "cardiology", "dermatology"
-  "insurance":          string,   // insurance plan name
-  "telehealth":         boolean,  // true if user wants telehealth
-  "zip_code":           string,   // 5-digit zip code
-  "max_distance_miles": number,   // numeric miles
-  "language":           string,   // preferred language
-  "reply":              string    // short friendly acknowledgement (1 sentence)
-}
+{{
+  "specialty":          string,
+  "insurance":          string,
+  "telehealth":         boolean,
+  "zip_code":           string,
+  "max_distance_miles": number,
+  "language":           string,
+  "reply":              string
+}}
 
 User message: {message}
 """
@@ -63,8 +78,7 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
     # 1. Extract filters from the user message via Gemini
     prompt = EXTRACT_PROMPT.format(message=request.message)
     try:
-        gemini_response = _model.generate_content(prompt)
-        raw = gemini_response.text.strip()
+        raw = _call_gemini(prompt).strip()
         # Strip markdown code fences if present
         if raw.startswith("```"):
             raw = raw.split("```")[1]
@@ -74,7 +88,7 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(
             status_code=502,
-            detail=f"Failed to parse Gemini response: {str(e)}",
+            detail=f"Gemini error: {type(e).__name__}: {str(e)} | raw={locals().get('raw', 'no response')}",
         )
 
     reply = filters.pop("reply", "Here are some providers that match your needs.")
