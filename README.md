@@ -6,6 +6,7 @@ Group 089 – CS-6440 Introduction to Health Informatics
 
 ```
 backend/        # FastAPI backend (Salwa)
+frontend/       # React chatbot UI (Salwa)
 ```
 
 ## Backend Setup
@@ -21,6 +22,20 @@ uvicorn main:app --reload
 
 API docs available at: http://localhost:8000/docs
 
+## Frontend Setup (Sprint 5)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Chat UI available at: http://localhost:5173
+
+The chatbot accepts natural language input (e.g. *"Find a cardiologist near 30318 that takes Medicaid and offers telehealth"*), extracts filters via Gemini, and returns ranked provider recommendations.
+
+> **Requires:** `GEMINI_API_KEY` set in `backend/.env`
+
 ## API Endpoints
 
 | Method | Path | Description |
@@ -34,6 +49,7 @@ API docs available at: http://localhost:8000/docs
 | GET | `/api/v1/fhir/conditions` | Search FHIR Condition resources by patient |
 | GET | `/api/v1/fhir/encounters` | Search FHIR Encounter resources by patient |
 | GET | `/api/v1/fhir/coverage` | Search FHIR Coverage resources by patient |
+| POST | `/api/v1/chat` | Natural language chatbot — extracts filters via Gemini and returns ranked providers |
 
 ## Sprint 4 Demo Checklist
 
