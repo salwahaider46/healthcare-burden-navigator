@@ -22,7 +22,7 @@ You are a healthcare search assistant. Extract structured search filters from
 the user's natural language message and return ONLY a JSON object with these
 optional fields (omit fields not mentioned):
 
-{
+{{
   "specialty":          string,   // e.g. "cardiology", "dermatology"
   "insurance":          string,   // insurance plan name
   "telehealth":         boolean,  // true if user wants telehealth
@@ -30,7 +30,7 @@ optional fields (omit fields not mentioned):
   "max_distance_miles": number,   // numeric miles
   "language":           string,   // preferred language
   "reply":              string    // short friendly acknowledgement (1 sentence)
-}
+}}
 
 User message: {message}
 """
