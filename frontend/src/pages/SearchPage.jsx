@@ -2,7 +2,7 @@ import { useState } from "react";
 import ProviderCard from "../components/ProviderCard";
 import "./SearchPage.css";
 
-const API_BASE = "http://localhost:8000/api/v1";
+const API_BASE = "/api/v1";
 
 const SPECIALTY_OPTIONS = [
   "Cardiology",
