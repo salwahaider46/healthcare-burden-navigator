@@ -15,7 +15,7 @@ from app.services.ranking import rank_providers
 router = APIRouter(prefix="/chat", tags=["chatbot"])
 
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-_model = genai.GenerativeModel("gemini-2.0-flash")
+_model = genai.GenerativeModel("gemini-2.0-flash-lite")
 
 EXTRACT_PROMPT = """
 You are a healthcare search assistant. Extract structured search filters from
