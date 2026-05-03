@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from typing import Optional
 
 import httpx
@@ -17,7 +18,7 @@ router = APIRouter(prefix="/chat", tags=["chatbot"])
 GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-flash-latest:generateContent"
+    "gemini-2.0-flash-lite:generateContent"
 )
 
 
@@ -50,6 +51,87 @@ optional fields (omit fields not mentioned):
 User message: {message}
 """
 
+# Known specialties (stem → display name) for local fallback parsing
+_SPECIALTY_STEMS = {
+    "cardiolog": "Cardiology",
+    "dermatolog": "Dermatology",
+    "endocrinolog": "Endocrinology",
+    "family med": "Family Medicine",
+    "gastroenterolog": "Gastroenterology",
+    "internal med": "Internal Medicine",
+    "neurolog": "Neurology",
+    "obstetric": "Obstetrics & Gynecology",
+    "gynecolog": "Obstetrics & Gynecology",
+    "oncolog": "Oncology",
+    "ophthalmolog": "Ophthalmology",
+    "orthoped": "Orthopedics",
+    "pediatric": "Pediatrics",
+    "psychiatr": "Psychiatry",
+    "pulmonolog": "Pulmonology",
+    "urolog": "Urology",
+}
+
+_INSURANCE_PLANS = [
+    "medicaid", "medicare", "aetna", "blue cross blue shield", "bcbs",
+    "cigna", "humana", "unitedhealth", "unitedhealthcare", "kaiser",
+    "kaiser permanente", "tricare",
+]
+
+
+def _extract_filters_local(message: str) -> dict:
+    """Keyword-based fallback when Gemini is unavailable."""
+    msg = message.lower()
+    filters = {}
+
+    # Specialty (stem-based so "cardiologist" matches "cardiology", etc.)
+    for stem, display_name in _SPECIALTY_STEMS.items():
+        if stem in msg:
+            filters["specialty"] = display_name
+            break
+
+    # Insurance
+    for plan in _INSURANCE_PLANS:
+        if plan in msg:
+            name = plan.title()
+            if plan == "bcbs":
+                name = "Blue Cross Blue Shield"
+            elif plan in ("unitedhealth", "unitedhealthcare"):
+                name = "UnitedHealthcare"
+            elif plan == "kaiser":
+                name = "Kaiser Permanente"
+            filters["insurance"] = name
+            break
+
+    # Telehealth
+    if "telehealth" in msg or "virtual" in msg or "online" in msg or "remote" in msg:
+        filters["telehealth"] = True
+
+    # Zip code
+    zip_match = re.search(r"\b(\d{5})\b", message)
+    if zip_match:
+        filters["zip_code"] = zip_match.group(1)
+
+    # Distance
+    dist_match = re.search(r"(\d+)\s*(?:mile|mi)", msg)
+    if dist_match:
+        filters["max_distance_miles"] = int(dist_match.group(1))
+
+    # Generate reply
+    parts = []
+    if "specialty" in filters:
+        parts.append(filters["specialty"].lower() + " providers")
+    else:
+        parts.append("providers")
+    if "insurance" in filters:
+        parts.append(f"accepting {filters['insurance']}")
+    if filters.get("telehealth"):
+        parts.append("with telehealth")
+    if "zip_code" in filters:
+        parts.append(f"near {filters['zip_code']}")
+
+    filters["reply"] = f"Searching for {' '.join(parts)}."
+    return filters
+
 
 class ChatMessage(BaseModel):
     role: str   # "user" or "assistant"
@@ -73,9 +155,10 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
     """
     Accept a natural language message, extract provider search filters using
     Gemini, run the ranked recommendations query, and return results with a
-    conversational reply.
+    conversational reply.  Falls back to local keyword parsing if Gemini is
+    unavailable.
     """
-    # 1. Extract filters from the user message via Gemini
+    # 1. Extract filters from the user message via Gemini (with fallback)
     prompt = EXTRACT_PROMPT.format(message=request.message)
     try:
         raw = _call_gemini(prompt).strip()
@@ -85,11 +168,9 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
             if raw.startswith("json"):
                 raw = raw[4:]
         filters = json.loads(raw.strip())
-    except Exception as e:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Gemini error: {type(e).__name__}: {str(e)} | raw={locals().get('raw', 'no response')}",
-        )
+    except Exception:
+        # Fallback: extract filters locally via keyword matching
+        filters = _extract_filters_local(request.message)
 
     reply = filters.pop("reply", "Here are some providers that match your needs.")
     language = filters.pop("language", None)  # stored but not yet a DB column

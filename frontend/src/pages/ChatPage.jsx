@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import ProviderCard from "../components/ProviderCard";
 
-const API_BASE = "http://localhost:8000/api/v1";
+const API_BASE = "/api/v1";
 
 export default function ChatPage() {
   const [messages, setMessages] = useState([
