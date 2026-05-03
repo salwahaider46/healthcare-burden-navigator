@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from typing import Optional
 
 import google.generativeai as genai
@@ -35,6 +36,76 @@ optional fields (omit fields not mentioned):
 User message: {message}
 """
 
+# Known specialties and insurance plans for local fallback parsing
+_SPECIALTIES = [
+    "cardiology", "dermatology", "endocrinology", "family medicine",
+    "gastroenterology", "internal medicine", "neurology",
+    "obstetrics & gynecology", "obstetrics", "gynecology", "oncology",
+    "ophthalmology", "orthopedics", "pediatrics", "psychiatry",
+    "pulmonology", "urology",
+]
+
+_INSURANCE_PLANS = [
+    "medicaid", "medicare", "aetna", "blue cross blue shield", "bcbs",
+    "cigna", "humana", "unitedhealth", "unitedhealthcare", "kaiser",
+    "kaiser permanente", "tricare",
+]
+
+
+def _extract_filters_local(message: str) -> dict:
+    """Keyword-based fallback when Gemini is unavailable."""
+    msg = message.lower()
+    filters = {}
+
+    # Specialty
+    for spec in _SPECIALTIES:
+        if spec in msg:
+            filters["specialty"] = spec.title()
+            break
+
+    # Insurance
+    for plan in _INSURANCE_PLANS:
+        if plan in msg:
+            name = plan.title()
+            if plan == "bcbs":
+                name = "Blue Cross Blue Shield"
+            elif plan in ("unitedhealth", "unitedhealthcare"):
+                name = "UnitedHealthcare"
+            elif plan == "kaiser":
+                name = "Kaiser Permanente"
+            filters["insurance"] = name
+            break
+
+    # Telehealth
+    if "telehealth" in msg or "virtual" in msg or "online" in msg or "remote" in msg:
+        filters["telehealth"] = True
+
+    # Zip code
+    zip_match = re.search(r"\b(\d{5})\b", message)
+    if zip_match:
+        filters["zip_code"] = zip_match.group(1)
+
+    # Distance
+    dist_match = re.search(r"(\d+)\s*(?:mile|mi)", msg)
+    if dist_match:
+        filters["max_distance_miles"] = int(dist_match.group(1))
+
+    # Generate reply
+    parts = []
+    if "specialty" in filters:
+        parts.append(filters["specialty"].lower() + " providers")
+    else:
+        parts.append("providers")
+    if "insurance" in filters:
+        parts.append(f"accepting {filters['insurance']}")
+    if filters.get("telehealth"):
+        parts.append("with telehealth")
+    if "zip_code" in filters:
+        parts.append(f"near {filters['zip_code']}")
+
+    filters["reply"] = f"Searching for {' '.join(parts)}."
+    return filters
+
 
 class ChatMessage(BaseModel):
     role: str   # "user" or "assistant"
@@ -58,9 +129,10 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
     """
     Accept a natural language message, extract provider search filters using
     Gemini, run the ranked recommendations query, and return results with a
-    conversational reply.
+    conversational reply.  Falls back to local keyword parsing if Gemini is
+    unavailable.
     """
-    # 1. Extract filters from the user message via Gemini
+    # 1. Extract filters from the user message via Gemini (with fallback)
     prompt = EXTRACT_PROMPT.format(message=request.message)
     try:
         gemini_response = _model.generate_content(prompt)
@@ -71,11 +143,9 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
             if raw.startswith("json"):
                 raw = raw[4:]
         filters = json.loads(raw.strip())
-    except Exception as e:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Failed to parse Gemini response: {str(e)}",
-        )
+    except Exception:
+        # Fallback: extract filters locally via keyword matching
+        filters = _extract_filters_local(request.message)
 
     reply = filters.pop("reply", "Here are some providers that match your needs.")
     language = filters.pop("language", None)  # stored but not yet a DB column
