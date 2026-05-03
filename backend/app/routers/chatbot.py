@@ -18,7 +18,7 @@ router = APIRouter(prefix="/chat", tags=["chatbot"])
 GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-flash-latest:generateContent"
+    "gemini-2.0-flash-lite:generateContent"
 )
 
 
@@ -38,27 +38,38 @@ You are a healthcare search assistant. Extract structured search filters from
 the user's natural language message and return ONLY a JSON object with these
 optional fields (omit fields not mentioned):
 
-{
-  "specialty":          string,   // e.g. "cardiology", "dermatology"
-  "insurance":          string,   // insurance plan name
-  "telehealth":         boolean,  // true if user wants telehealth
-  "zip_code":           string,   // 5-digit zip code
-  "max_distance_miles": number,   // numeric miles
-  "language":           string,   // preferred language
-  "reply":              string    // short friendly acknowledgement (1 sentence)
-}
+{{
+  "specialty":          string,
+  "insurance":          string,
+  "telehealth":         boolean,
+  "zip_code":           string,
+  "max_distance_miles": number,
+  "language":           string,
+  "reply":              string
+}}
 
 User message: {message}
 """
 
-# Known specialties and insurance plans for local fallback parsing
-_SPECIALTIES = [
-    "cardiology", "dermatology", "endocrinology", "family medicine",
-    "gastroenterology", "internal medicine", "neurology",
-    "obstetrics & gynecology", "obstetrics", "gynecology", "oncology",
-    "ophthalmology", "orthopedics", "pediatrics", "psychiatry",
-    "pulmonology", "urology",
-]
+# Known specialties (stem → display name) for local fallback parsing
+_SPECIALTY_STEMS = {
+    "cardiolog": "Cardiology",
+    "dermatolog": "Dermatology",
+    "endocrinolog": "Endocrinology",
+    "family med": "Family Medicine",
+    "gastroenterolog": "Gastroenterology",
+    "internal med": "Internal Medicine",
+    "neurolog": "Neurology",
+    "obstetric": "Obstetrics & Gynecology",
+    "gynecolog": "Obstetrics & Gynecology",
+    "oncolog": "Oncology",
+    "ophthalmolog": "Ophthalmology",
+    "orthoped": "Orthopedics",
+    "pediatric": "Pediatrics",
+    "psychiatr": "Psychiatry",
+    "pulmonolog": "Pulmonology",
+    "urolog": "Urology",
+}
 
 _INSURANCE_PLANS = [
     "medicaid", "medicare", "aetna", "blue cross blue shield", "bcbs",
@@ -72,10 +83,10 @@ def _extract_filters_local(message: str) -> dict:
     msg = message.lower()
     filters = {}
 
-    # Specialty
-    for spec in _SPECIALTIES:
-        if spec in msg:
-            filters["specialty"] = spec.title()
+    # Specialty (stem-based so "cardiologist" matches "cardiology", etc.)
+    for stem, display_name in _SPECIALTY_STEMS.items():
+        if stem in msg:
+            filters["specialty"] = display_name
             break
 
     # Insurance
@@ -157,11 +168,9 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
             if raw.startswith("json"):
                 raw = raw[4:]
         filters = json.loads(raw.strip())
-    except Exception as e:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Failed to parse Gemini response: {str(e)}",
-        )
+    except Exception:
+        # Fallback: extract filters locally via keyword matching
+        filters = _extract_filters_local(request.message)
 
     reply = filters.pop("reply", "Here are some providers that match your needs.")
     language = filters.pop("language", None)  # stored but not yet a DB column
