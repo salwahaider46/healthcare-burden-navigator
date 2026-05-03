@@ -6,7 +6,7 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #f0f4f8;
+  background: #f7f8fc;
   color: #1a202c;
   height: 100vh;
 }
@@ -23,11 +23,20 @@ body {
   height: 100vh;
 }
 
+/* Header */
 .header {
-  background: #2b6cb0;
+  background: linear-gradient(135deg, #1a56db 0%, #1e40af 100%);
   color: white;
-  padding: 16px 24px;
+  padding: 18px 28px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 2px 8px rgba(26, 86, 219, 0.3);
+}
+
+.header-icon {
+  font-size: 1.8rem;
 }
 
 .header-top {
@@ -37,44 +46,18 @@ body {
 }
 
 .header h1 {
-  font-size: 1.4rem;
+  font-size: 1.25rem;
   font-weight: 700;
+  letter-spacing: -0.3px;
 }
 
 .header p {
-  font-size: 0.875rem;
-  opacity: 0.85;
-  margin-top: 2px;
+  font-size: 0.8rem;
+  opacity: 0.8;
+  margin-top: 1px;
 }
 
-.header-nav {
-  display: flex;
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-  padding: 4px;
-}
-
-.header-nav a {
-  color: rgba(255, 255, 255, 0.8);
-  text-decoration: none;
-  font-size: 0.85rem;
-  font-weight: 600;
-  padding: 6px 16px;
-  border-radius: 6px;
-  transition: background 0.2s, color 0.2s;
-}
-
-.header-nav a:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: white;
-}
-
-.header-nav a.active {
-  background: white;
-  color: #2b6cb0;
-}
-
+/* Layout */
 .layout {
   display: flex;
   flex: 1;
@@ -85,23 +68,37 @@ body {
 .chat-panel {
   display: flex;
   flex-direction: column;
-  width: 400px;
+  width: 420px;
   flex-shrink: 0;
   background: white;
-  border-right: 1px solid #e2e8f0;
+  border-right: 1px solid #e8ecf4;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.04);
+}
+
+.chat-panel-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid #e8ecf4;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: #fafbff;
 }
 
 .messages {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 20px 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .message {
   display: flex;
+  align-items: flex-end;
+  gap: 8px;
 }
 
 .message.user {
@@ -112,88 +109,150 @@ body {
   justify-content: flex-start;
 }
 
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1a56db, #7c3aed);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  color: white;
+}
+
 .bubble {
-  max-width: 80%;
-  padding: 10px 14px;
-  border-radius: 16px;
-  font-size: 0.9rem;
-  line-height: 1.5;
+  max-width: 78%;
+  padding: 11px 15px;
+  border-radius: 18px;
+  font-size: 0.88rem;
+  line-height: 1.55;
 }
 
 .message.user .bubble {
-  background: #2b6cb0;
+  background: linear-gradient(135deg, #1a56db, #1e40af);
   color: white;
   border-bottom-right-radius: 4px;
+  box-shadow: 0 2px 8px rgba(26, 86, 219, 0.25);
 }
 
 .message.assistant .bubble {
-  background: #edf2f7;
+  background: #f1f4fd;
   color: #1a202c;
   border-bottom-left-radius: 4px;
+  border: 1px solid #e4e9f8;
 }
 
-.bubble.loading {
-  opacity: 0.6;
-  font-style: italic;
+/* Loading dots */
+.loading-dots {
+  display: flex;
+  gap: 4px;
+  padding: 4px 2px;
+  align-items: center;
 }
 
+.loading-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #9ca3af;
+  animation: bounce 1.2s infinite ease-in-out;
+}
+
+.loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30% { transform: translateY(-6px); opacity: 1; }
+}
+
+/* Input */
 .input-row {
   display: flex;
   gap: 8px;
-  padding: 12px;
-  border-top: 1px solid #e2e8f0;
+  padding: 14px;
+  border-top: 1px solid #e8ecf4;
   background: white;
+  align-items: flex-end;
 }
 
 .input-row textarea {
   flex: 1;
   resize: none;
-  border: 1px solid #cbd5e0;
-  border-radius: 8px;
-  padding: 8px 12px;
+  border: 1.5px solid #dde3f0;
+  border-radius: 12px;
+  padding: 10px 14px;
   font-size: 0.875rem;
   font-family: inherit;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background: #f9fafb;
+  line-height: 1.5;
 }
 
 .input-row textarea:focus {
-  border-color: #2b6cb0;
+  border-color: #1a56db;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.1);
 }
 
-.input-row button {
-  background: #2b6cb0;
+.send-btn {
+  background: linear-gradient(135deg, #1a56db, #1e40af);
   color: white;
   border: none;
-  border-radius: 8px;
-  padding: 0 20px;
-  font-size: 0.875rem;
-  font-weight: 600;
+  border-radius: 12px;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: opacity 0.2s, transform 0.1s;
+  flex-shrink: 0;
+  font-size: 1.1rem;
 }
 
-.input-row button:hover:not(:disabled) {
-  background: #2c5282;
+.send-btn:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: scale(1.05);
 }
 
-.input-row button:disabled {
-  opacity: 0.5;
+.send-btn:disabled {
+  opacity: 0.4;
   cursor: not-allowed;
+  transform: none;
 }
 
 /* Results panel */
 .results-panel {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 24px;
+  background: #f7f8fc;
 }
 
-.results-panel h2 {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: 16px;
-  color: #2d3748;
+.results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.results-header h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a202c;
+}
+
+.results-count {
+  font-size: 0.78rem;
+  color: #6b7280;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 3px 10px;
 }
 
 .provider-list {
@@ -202,12 +261,25 @@ body {
   gap: 12px;
 }
 
+/* Empty state */
 .empty-results {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #a0aec0;
+  gap: 12px;
+  color: #9ca3af;
   text-align: center;
-  font-size: 0.95rem;
+}
+
+.empty-icon {
+  font-size: 3rem;
+  opacity: 0.5;
+}
+
+.empty-results p {
+  font-size: 0.9rem;
+  max-width: 220px;
+  line-height: 1.6;
 }

@@ -5,62 +5,11 @@ Group 089 – CS-6440 Introduction to Health Informatics
 ## Project Structure
 
 ```
-backend/          # FastAPI backend
-  app/            # Application package (routers, services, models, schemas)
-  fhir_docker_setup/  # Docker Compose for Postgres + FHIR data loader
-  seed_providers.py   # Script to create tables and seed sample provider data
-  main.py         # FastAPI entry point
-frontend/         # React (Vite) frontend
-  src/
-    pages/        # ChatPage and SearchPage
-    components/   # ProviderCard
+backend/        # FastAPI backend (Salwa)
+frontend/       # React chatbot UI (Salwa)
 ```
 
-## Prerequisites
-
-- **Docker** (for PostgreSQL)
-- **Python 3.10+** (tested with 3.12)
-- **Node.js 18+**
-- A **Gemini API key** from [Google AI Studio](https://aistudio.google.com/apikey) (needed for the chat feature)
-
-## Quick Start
-
-### 1. Start PostgreSQL
-
-```bash
-cd backend/fhir_docker_setup
-cp .env.example .env
-docker compose up -d
-```
-
-This starts:
-- **Postgres** on `localhost:5432` (user: `fhir_user`, password: `fhir_password`)
-- **pgAdmin** on `http://localhost:5050` (optional, for browsing data)
-
-### 2. Create the application database
-
-The Docker Compose creates the `fhir_demo` database for FHIR data. The backend app uses a separate database called `healthcare_nav`:
-
-```bash
-docker exec -it fhir_postgres psql -U fhir_user -d fhir_demo -c "CREATE DATABASE healthcare_nav;"
-```
-
-### 3. Configure environment variables
-
-```bash
-cd backend
-cp .env.example .env
-```
-
-Edit `backend/.env` with these values:
-
-```
-DATABASE_URL=postgresql://fhir_user:fhir_password@localhost:5432/healthcare_nav
-FHIR_BASE_URL=http://localhost:8081/fhir
-GEMINI_API_KEY=your_actual_gemini_api_key
-```
-
-### 4. Set up the Python environment
+## Backend Setup
 
 ```bash
 cd backend
@@ -103,7 +52,7 @@ curl -s "http://localhost:8000/api/v1/providers/recommendations?limit=3"
 
 API docs available at: http://localhost:8000/docs
 
-### 7. Start the frontend
+## Frontend Setup (Sprint 5)
 
 ```bash
 cd frontend
@@ -111,10 +60,11 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173 in your browser.
+Chat UI available at: http://localhost:5173
 
-- **Chat** tab (`/`) — natural language provider search powered by Gemini
-- **Search** tab (`/search`) — filter-based search with controls for specialty, insurance, telehealth, distance, and language
+The chatbot accepts natural language input (e.g. *"Find a cardiologist near 30318 that takes Medicaid and offers telehealth"*), extracts filters via Gemini, and returns ranked provider recommendations.
+
+> **Requires:** `GEMINI_API_KEY` set in `backend/.env`
 
 ## API Endpoints
 
@@ -130,41 +80,13 @@ Open http://localhost:5173 in your browser.
 | GET | `/api/v1/fhir/conditions` | Search FHIR Condition resources by patient |
 | GET | `/api/v1/fhir/encounters` | Search FHIR Encounter resources by patient |
 | GET | `/api/v1/fhir/coverage` | Search FHIR Coverage resources by patient |
+| POST | `/api/v1/chat` | Natural language chatbot — extracts filters via Gemini and returns ranked providers |
 
-## Loading FHIR Patient Data (Optional)
+## Sprint 4 Demo Checklist
 
-To load FHIR patient bundles (for patient-context-aware ranking):
+Use this checklist for the status check-in demo (under 5 minutes).
 
-```bash
-cd backend/fhir_docker_setup
-docker compose --profile loader run --rm fhir_loader
-```
-
-See `backend/fhir_docker_setup/README.md` for more details.
-
-## EC2 Deployment
-
-### Prerequisites (on the EC2 instance)
-
-```bash
-# Update system (Ubuntu)
-sudo apt update && sudo apt upgrade -y
-
-# Install Docker
-sudo apt install -y docker.io docker-compose-plugin
-sudo systemctl enable docker --now
-sudo usermod -aG docker $USER
-# Log out and back in for the group change to take effect
-
-# Install Python
-sudo apt install -y python3 python3-venv python3-pip
-
-# Install Node.js
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt install -y nodejs
-```
-
-### Clone and set up
+1) Confirm API is up:
 
 ```bash
 git clone https://github.com/salwahaider46/healthcare-burden-navigator.git

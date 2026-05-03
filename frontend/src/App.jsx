@@ -7,20 +7,18 @@ export default function App() {
   return (
     <div className="app">
       <header className="header">
-        <div className="header-top">
-          <div>
-            <h1>Healthcare Burden Navigator</h1>
-            <p>Find providers that fit your needs</p>
-          </div>
-          <nav className="header-nav">
-            <NavLink to="/" end>
-              Chat
-            </NavLink>
-            <NavLink to="/search">
-              Search
-            </NavLink>
-          </nav>
+        <div>
+          <h1>Healthcare Burden Navigator</h1>
+          <p className="subtitle">Find providers that fit your needs</p>
         </div>
+        <nav className="nav-tabs">
+          <NavLink to="/" end className={({ isActive }) => (isActive ? "tab active" : "tab")}>
+            Chat
+          </NavLink>
+          <NavLink to="/search" className={({ isActive }) => (isActive ? "tab active" : "tab")}>
+            Search
+          </NavLink>
+        </nav>
       </header>
 
       <Routes>
